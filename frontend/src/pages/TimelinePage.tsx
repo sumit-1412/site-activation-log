@@ -15,7 +15,9 @@ import {
   IconSpinner,
 } from '../components/icons';
 import { TemplateButton } from '../components/ui/TemplateButton';
+import { PageHeader } from '../components/layout/PageHeader';
 import { MilestoneRow } from '../components/timeline/MilestoneRow';
+import { ROUTES } from '../routes/paths';
 
 const FILTERS = [
   ['all', 'All'],
@@ -70,14 +72,16 @@ export function TimelinePage() {
   };
 
   return (
-    <div className="pb-24">
-      <div className="mx-4 mt-4 mb-2.5">
+    <div>
+      <PageHeader
+        title="Timeline"
+        subtitle="Onboarding · 7 phases · 51 milestones"
+        backTo={ROUTES.home}
+      />
+      <div className="mb-2.5">
         <div className="font-mono text-[10px] uppercase tracking-widest text-ink3">
-          Onboarding Timeline · 7 Phases · 51 Milestones
-        </div>
-        <p className="mt-1.5 text-[10.5px] leading-snug text-ink3">
           Tap a step to update · swipe right = done · swipe left = waiting
-        </p>
+        </div>
         <div className="mt-2 flex flex-wrap gap-2.5">
           {(['pending', 'inprogress', 'waiting', 'blocked', 'done'] as const).map((s) => (
             <span key={s} className="inline-flex items-center gap-1 text-[10px] text-ink2">
@@ -88,7 +92,7 @@ export function TimelinePage() {
         </div>
       </div>
 
-      <div className="mb-2 flex gap-1.5 overflow-x-auto px-4 pb-1 [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
+      <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
         {FILTERS.map(([k, l]) => (
           <button
             key={k}
@@ -112,7 +116,7 @@ export function TimelinePage() {
           const isOpen = msFilter !== 'all' || openPhases.has(p.id);
 
           return (
-            <div key={p.id} className={`mx-4 mb-2.5 overflow-hidden rounded-app border border-line bg-surface shadow-app ${isOpen ? 'open' : ''}`}>
+            <div key={p.id} className={`mb-2.5 w-full overflow-hidden rounded-app border border-line bg-surface shadow-app sm:mb-3 ${isOpen ? 'open' : ''}`}>
               <button
                 type="button"
                 onClick={() => togglePhase(p.id)}

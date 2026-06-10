@@ -1,27 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { displayNameFromUser } from '../../lib/user';
 import { todayISO } from '../../lib/utils';
 import { Modal } from '../ui/Modal';
 
-const TEAM = ['Puranjane', 'Samir', 'Ujjwal', 'Srinivas'];
-
 export function VisitModal() {
   const { visitModalOpen, setVisitModalOpen, saveVisit } = useApp();
+  const { user } = useAuth();
+  const you = displayNameFromUser(user);
+
   const [date, setDate] = useState(todayISO());
   const [type, setType] = useState('Site Survey');
-  const [team, setTeam] = useState<string[]>([]);
+  const [additionalTeam, setAdditionalTeam] = useState('');
   const [clientMet, setClientMet] = useState('');
   const [outcome, setOutcome] = useState('productive');
   const [nextAction, setNextAction] = useState('');
   const [nextOwner, setNextOwner] = useState('Humblx');
   const [nextDate, setNextDate] = useState('');
 
-  const handleSave = () => {
-    saveVisit({ date, type, team, clientMet, outcome, nextAction, nextOwner, nextDate });
+  useEffect(() => {
+    if (!visitModalOpen) return;
+    setDate(todayISO());
+    setAdditionalTeam('');
     setClientMet('');
     setNextAction('');
     setNextDate('');
-    setTeam([]);
+    setOutcome('productive');
+    setNextOwner('Humblx');
+    setType('Site Survey');
+  }, [visitModalOpen]);
+
+  const handleSave = () => {
+    const extras = additionalTeam
+      .split(',')
+      .map((name) => name.trim())
+      .filter((name) => name && name.toLowerCase() !== you.toLowerCase());
+    saveVisit({
+      date,
+      type,
+      team: [you, ...extras],
+      clientMet,
+      outcome,
+      nextAction,
+      nextOwner,
+      nextDate,
+    });
   };
 
   return (
@@ -34,14 +58,15 @@ export function VisitModal() {
         </select>
       </FormField>
       <FormField label="Humblx team present">
-        <div className="grid grid-cols-2 gap-2">
-          {TEAM.map((t) => (
-            <label key={t} className="flex items-center gap-2 rounded-[9px] border border-line p-2.5 text-[13px]">
-              <input type="checkbox" checked={team.includes(t)} onChange={(e) => setTeam(e.target.checked ? [...team, t] : team.filter((x) => x !== t))} className="accent-accent" />
-              {t}
-            </label>
-          ))}
+        <div className="mb-2 rounded-[9px] border border-accent-line bg-accent-soft px-3 py-2 text-[13px] text-ink">
+          {you} <span className="text-xs text-ink3">(you)</span>
         </div>
+        <input
+          className="fld"
+          value={additionalTeam}
+          onChange={(e) => setAdditionalTeam(e.target.value)}
+          placeholder="Additional teammates, comma-separated"
+        />
       </FormField>
       <FormField label="Client person met"><input className="fld" value={clientMet} onChange={(e) => setClientMet(e.target.value)} placeholder="Name & role" /></FormField>
       <FormField label="Outcome">

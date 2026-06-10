@@ -1,0 +1,17 @@
+# API only — uses MongoDB URI from backend/.env (Atlas, DocumentDB, etc.)
+# Requires Docker Desktop running.
+#
+#   docker compose up api --build
+#
+# For local MongoDB in Docker instead, see docker-compose.local.yml
+
+services:
+  api:
+    build: ./backend
+    ports:
+      - "${PORT:-8080}:8080"
+    env_file:
+      - ./backend/.env
+    environment:
+      PORT: "8080"
+    restart: unless-stopped

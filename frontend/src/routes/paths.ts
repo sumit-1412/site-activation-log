@@ -1,5 +1,8 @@
 export const ROUTES = {
-  setup: '/setup',
+  login: '/login',
+  hospitals: '/hospitals',
+  hospitalNew: '/hospitals/new',
+  hospitalEdit: (id: string) => `/hospitals/${id}/edit`,
   home: '/home',
   timeline: '/timeline',
   visits: '/visits',

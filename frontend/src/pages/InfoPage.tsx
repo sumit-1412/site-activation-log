@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { TEMPLATES } from '../data/templates';
 import { useApp } from '../context/AppContext';
 import { downloadTemplate } from '../lib/templates';
 import { rel } from '../lib/utils';
 import type { HospitalInfo, Poc } from '../types';
+import { PageHeader } from '../components/layout/PageHeader';
+import { UserAccountMenu } from '../components/layout/UserAccountMenu';
 import { IconChat, IconDl, IconFile, IconMail, IconPhone, IconPlus } from '../components/icons';
+import { ROUTES } from '../routes/paths';
 
 const MODULES = [
   { id: 'HK', label: 'Housekeeping' },
@@ -14,17 +18,43 @@ const MODULES = [
 ];
 
 export function InfoPage() {
-  const { state, saveInfo, setPocModalOpen, resetApp, showToast } = useApp();
+  const { state, currentHospitalId, senderName, saveInfo, setPocModalOpen, deleteHospital, showToast } = useApp();
   const [info, setInfo] = useState<HospitalInfo>(state.info);
 
+  useEffect(() => {
+    setInfo(state.info);
+  }, [currentHospitalId, state.info]);
+
   const handleSave = () => {
-    saveInfo(info);
+    saveInfo({ ...info, poc: info.poc.trim() || senderName });
   };
 
+  const humblxLead = info.poc.trim() || senderName;
+
   return (
-    <div className="pb-24">
-      <div className="mx-4 mt-4 mb-3 font-mono text-[10px] uppercase tracking-widest text-ink3">Hospital Details</div>
-      <div className="mx-4 mb-4 rounded-app border border-line bg-surface p-4 shadow-app">
+    <div>
+      <PageHeader title="Settings" subtitle="Hospital info, contacts & resources" backTo={ROUTES.home} />
+      <div className="mb-4 space-y-3">
+        <UserAccountMenu variant="full" />
+        <Link
+          to={ROUTES.hospitals}
+          className="flex w-full items-center justify-center rounded-app-sm border border-line bg-surface py-3 text-sm font-semibold text-ink no-underline transition-colors hover:border-accent hover:text-accent"
+        >
+          All hospitals
+        </Link>
+        {currentHospitalId && (
+          <Link
+            to={ROUTES.hospitalEdit(currentHospitalId)}
+            className="flex w-full items-center justify-center rounded-app-sm border border-line bg-surface py-3 text-sm font-semibold text-ink no-underline transition-colors hover:border-accent hover:text-accent"
+          >
+            Edit this hospital
+          </Link>
+        )}
+      </div>
+      <div className="page-grid-2">
+      <div>
+      <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-ink3">Hospital Details</div>
+      <div className="mb-4 rounded-app border border-line bg-surface p-4 shadow-app sm:p-5">
         <Field label="Hospital name">
           <input className="fld" value={info.name} onChange={(e) => setInfo({ ...info, name: e.target.value })} />
         </Field>
@@ -37,8 +67,14 @@ export function InfoPage() {
             <option>Full Onboarding</option><option>Pilot</option><option>Expansion</option>
           </select>
         </Field>
-        <Field label="Humblx PoC">
-          <input className="fld" value={info.poc} onChange={(e) => setInfo({ ...info, poc: e.target.value })} />
+        <Field label="Humblx lead">
+          <input
+            className="fld"
+            value={info.poc}
+            onChange={(e) => setInfo({ ...info, poc: e.target.value })}
+            placeholder={senderName}
+          />
+          <p className="mt-1 text-[11px] text-ink3">Shown to the client as their Humblx contact. Defaults to you ({humblxLead}).</p>
         </Field>
         <div className="grid grid-cols-2 gap-2">
           <Field label="Start date"><input className="fld" type="date" value={info.startDate} onChange={(e) => setInfo({ ...info, startDate: e.target.value })} /></Field>
@@ -57,8 +93,8 @@ export function InfoPage() {
         <button type="button" onClick={handleSave} className="w-full rounded-app-sm bg-accent py-3 text-sm font-semibold text-white">Save Details</button>
       </div>
 
-      <div className="mx-4 mb-3 font-mono text-[10px] uppercase tracking-widest text-ink3">Client Points of Contact</div>
-      <div className="mx-4 mb-4 rounded-app border border-line bg-surface p-4 shadow-app">
+      <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-ink3">Client Points of Contact</div>
+      <div className="mb-4 rounded-app border border-line bg-surface p-4 shadow-app sm:p-5">
         {state.pocs.length === 0 ? (
           <p className="py-1.5 text-[13px] text-ink3">No PoCs added yet.</p>
         ) : (
@@ -68,9 +104,11 @@ export function InfoPage() {
           <IconPlus className="h-4 w-4" /> Add PoC
         </button>
       </div>
+      </div>
 
-      <div className="mx-4 mb-3 font-mono text-[10px] uppercase tracking-widest text-ink3">Templates & Resources</div>
-      <div className="mx-4 mb-4 rounded-app border border-line bg-surface p-4 shadow-app">
+      <div>
+      <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-ink3">Templates & Resources</div>
+      <div className="mb-4 rounded-app border border-line bg-surface p-4 shadow-app sm:p-5">
         {Object.keys(TEMPLATES).map((k) => {
           const t = TEMPLATES[k];
           const ext = t.file.split('.').pop()?.toUpperCase();
@@ -100,23 +138,41 @@ export function InfoPage() {
         </p>
       </div>
 
-      <div className="mx-4 mb-3 font-mono text-[10px] uppercase tracking-widest text-ink3">Recent Activity</div>
-      <div className="mx-4 mb-4 rounded-app border border-line bg-surface p-4 shadow-app">
-        {state.activity.slice(0, 12).map((e, i) => (
-          <div key={i} className="flex items-center gap-2.5 border-b border-line2 py-2 last:border-b-0">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-            <div className="min-w-0 flex-1 text-[12.5px] text-ink">{e.txt}</div>
-            <span className="shrink-0 font-mono text-[10px] text-ink3">{rel(e.t)}</span>
-          </div>
-        ))}
+      <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-ink3">Recent Activity</div>
+      <div className="mb-4 rounded-app border border-line bg-surface p-4 shadow-app sm:p-5">
+        {state.activity.length === 0 ? (
+          <p className="py-2 text-[13px] text-ink3">No activity yet — updates appear here when you change milestones, log visits, or send nudges.</p>
+        ) : (
+          state.activity.slice(0, 12).map((e, i) => (
+            <div key={i} className="flex items-center gap-2.5 border-b border-line2 py-2 last:border-b-0">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+              <div className="min-w-0 flex-1 text-[12.5px] text-ink">{e.txt}</div>
+              <span className="shrink-0 font-mono text-[10px] text-ink3">{rel(e.t)}</span>
+            </div>
+          ))
+        )}
       </div>
 
-      <div className="mx-4 rounded-app border border-line bg-surface p-4 shadow-app">
-        <div className="mb-1 text-[13px] font-semibold">Start a new hospital</div>
-        <p className="mb-2.5 text-[11.5px] leading-snug text-ink3">Clears this tracker and returns to setup. This can&apos;t be undone.</p>
-        <button type="button" onClick={resetApp} className="w-full rounded-app-sm border border-[#ecc9c2] bg-transparent py-3 text-[13px] font-semibold text-red">
-          Clear & start new
-        </button>
+      {currentHospitalId && (
+        <div className="rounded-app border border-line bg-surface p-4 shadow-app sm:p-5">
+          <div className="mb-1 text-[13px] font-semibold text-red">Delete this hospital</div>
+          <p className="mb-2.5 text-[11.5px] leading-snug text-ink3">
+            Permanently removes <strong>{state.info.name}</strong> and all its data. This can&apos;t be undone.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(`Delete ${state.info.name}? This cannot be undone.`)) {
+                void deleteHospital(currentHospitalId);
+              }
+            }}
+            className="w-full rounded-app-sm border border-[#ecc9c2] bg-transparent py-3 text-[13px] font-semibold text-red"
+          >
+            Delete hospital
+          </button>
+        </div>
+      )}
+      </div>
       </div>
     </div>
   );

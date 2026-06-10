@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { getClientWaiting, pickPocFor } from '../lib/selectors';
+import { PageHeader } from '../components/layout/PageHeader';
 import { IconCheckOk, IconCopy, IconInbox, IconSend } from '../components/icons';
-
-const SENDERS = ['Puranjane', 'Samir', 'Ujjwal'];
+import { ROUTES } from '../routes/paths';
 
 export function NudgePage() {
   const {
     state,
-    currentSender,
-    setCurrentSender,
+    senderName,
     nudgePoc,
     setNudgePoc,
     nudgeDraft,
@@ -30,13 +29,13 @@ export function NudgePage() {
   const defaultMessage = useMemo(() => {
     if (!waiting.length) return 'No pending items from client at this time.';
     const to = state.pocs[nudgePoc]?.name?.split(' ')[0];
-    let msg = `Hi${to ? ` ${to}` : ''},\n\nHope you're doing well! This is ${currentSender} from Humblx.\n\nWe're progressing well on the ${state.info.name} setup. To keep things moving, we need the following from your end:\n\n`;
+    let msg = `Hi${to ? ` ${to}` : ''},\n\nHope you're doing well! This is ${senderName} from Humblx.\n\nWe're progressing well on the ${state.info.name} setup. To keep things moving, we need the following from your end:\n\n`;
     waiting.forEach((w, i) => {
       msg += `${i + 1}. ${w.label}\n`;
     });
-    msg += `\nOnce we have these, we can proceed to the next phase right away. Feel free to reach out if you need any help.\n\nThank you!\n${currentSender}\nHumblx — ${state.info.name}`;
+    msg += `\nOnce we have these, we can proceed to the next phase right away. Feel free to reach out if you need any help.\n\nThank you!\n${senderName}\nHumblx — ${state.info.name}`;
     return msg;
-  }, [waiting, state.info.name, state.pocs, nudgePoc, currentSender]);
+  }, [waiting, state.info.name, state.pocs, nudgePoc, senderName]);
 
   const [message, setMessage] = useState(defaultMessage);
 
@@ -50,8 +49,10 @@ export function NudgePage() {
   }, [nudgeDraft, defaultMessage, clearNudgeDraft]);
 
   return (
-    <div className="pb-24">
-      <div className="mx-4 mt-4 rounded-app border border-line bg-surface p-4 shadow-app">
+    <div>
+      <PageHeader title="Nudge" subtitle="Client follow-up messages" backTo={ROUTES.home} />
+      <div className="page-grid-2">
+      <div className="rounded-app border border-line bg-surface p-4 shadow-app sm:p-5">
         <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-ink3">Client-Pending Items</div>
         <div className="mb-3.5 overflow-hidden rounded-app-sm border border-line2">
           {!waiting.length ? (
@@ -94,18 +95,8 @@ export function NudgePage() {
           </div>
         )}
 
-        <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-ink3">Sign Off As</div>
-        <div className="mb-3 flex gap-1.5">
-          {SENDERS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setCurrentSender(s)}
-              className={`flex-1 rounded-lg border px-2 py-2 text-xs font-medium ${currentSender === s ? 'border-ink bg-ink text-white' : 'border-line bg-surface2 text-ink2'}`}
-            >
-              {s}
-            </button>
-          ))}
+        <div className="mb-3 rounded-app-sm border border-line bg-surface2 px-3 py-2.5 text-xs text-ink2">
+          Signing as <span className="font-semibold text-ink">{senderName}</span> (your logged-in account)
         </div>
 
         <div className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-ink3">Message · editable</div>
@@ -124,7 +115,7 @@ export function NudgePage() {
         </div>
       </div>
 
-      <div className="mx-4">
+      <div>
         <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-ink3">Nudge History</div>
         {!state.nudgeLogs.length ? (
           <div className="rounded-app border border-line bg-surface px-6 py-8 text-center text-[13px] text-ink3 shadow-app">
@@ -139,6 +130,7 @@ export function NudgePage() {
             </div>
           ))
         )}
+      </div>
       </div>
     </div>
   );

@@ -7,30 +7,39 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { activationApi } from '../api/client';
+import { activationApi, ApiError, isUnauthorized, stateFromDoc, USE_API } from '../api/client';
+import { useAuth } from './AuthContext';
 import { DOC_NAME, MS_DOC } from '../data/docs';
 import { PHASES } from '../data/phases';
 import { flatMilestones } from '../lib/selectors';
 import { blankState, demoState } from '../lib/state';
 import { pickPocFor } from '../lib/selectors';
 import { appNavigate } from '../lib/navigation';
+import { displayNameFromUser, humblxPocName } from '../lib/user';
 import { buzz, todayISO } from '../lib/utils';
 import { ROUTES } from '../routes/paths';
 import type {
   ActivationState,
   DocStatus,
   HospitalInfo,
+  HospitalSummary,
   MilestoneStatus,
   MsFilter,
   Poc,
   Visit,
 } from '../types';
 
+export type DbStatus = 'checking' | 'connected' | 'disconnected' | 'local';
+
 interface AppContextValue {
   state: ActivationState;
   loaded: boolean;
+  dbStatus: DbStatus;
+  dbError: string | null;
+  bootError: { title: string; message: string; hint?: string } | null;
+  retryConnection: () => void;
   msFilter: MsFilter;
-  currentSender: string;
+  senderName: string;
   nudgePoc: number;
   toast: string | null;
   statusModal: { open: boolean; milestoneId: string | null; note: string; date: string };
@@ -38,9 +47,9 @@ interface AppContextValue {
   pocModalOpen: boolean;
   openPhases: Set<number>;
   setupPocs: Partial<Poc>[];
-  showSetup: boolean;
+  hospitals: HospitalSummary[];
+  currentHospitalId: string | null;
   setMsFilter: (f: MsFilter) => void;
-  setCurrentSender: (name: string) => void;
   setNudgePoc: (i: number) => void;
   showToast: (msg: string) => void;
   togglePhase: (id: number) => void;
@@ -61,11 +70,14 @@ interface AppContextValue {
   copyNudge: (message: string) => void;
   quickNudge: (id: string, label?: string) => void;
   escalate: (id: string, label: string) => void;
-  startSetup: (info: HospitalInfo, pocs: Poc[]) => string | null;
-  loadDemo: () => void;
-  resetApp: () => void;
-  continueTracking: () => void;
+  selectHospital: (id: string) => Promise<void>;
+  createHospital: (info: HospitalInfo, pocs: Poc[]) => Promise<string | null>;
+  updateHospital: (id: string, info: HospitalInfo, pocs: Poc[]) => Promise<string | null>;
+  deleteHospital: (id: string) => Promise<void>;
+  refreshHospitals: () => Promise<HospitalSummary[]>;
+  loadDemo: () => Promise<void>;
   setSetupPocs: (pocs: Partial<Poc>[]) => void;
+  resetSetupForm: () => void;
   addSetupPoc: () => void;
   removeSetupPoc: (i: number) => void;
   clientDone: (label: string) => void;
@@ -83,11 +95,12 @@ function pushActivity(state: ActivationState, txt: string): ActivationState {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { authReady, authRequired, user, clearSession } = useAuth();
   const [state, setState] = useState<ActivationState>(blankState);
   const [loaded, setLoaded] = useState(false);
   const [msFilter, setMsFilter] = useState<MsFilter>('all');
-  const [currentSender, setCurrentSender] = useState('Puranjane');
   const [nudgePoc, setNudgePoc] = useState(0);
+  const senderName = useMemo(() => displayNameFromUser(user), [user]);
   const [toast, setToast] = useState<string | null>(null);
   const [statusModal, setStatusModal] = useState({
     open: false,
@@ -100,27 +113,134 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [openPhases, setOpenPhases] = useState<Set<number>>(new Set());
   const [setupPocs, setSetupPocs] = useState<Partial<Poc>[]>([{}]);
   const [nudgeDraft, setNudgeDraft] = useState<string | null>(null);
-  const [setupDismissed, setSetupDismissed] = useState(false);
+  const [hospitals, setHospitals] = useState<HospitalSummary[]>([]);
+  const [currentHospitalId, setCurrentHospitalId] = useState<string | null>(null);
+  const [dbStatus, setDbStatus] = useState<DbStatus>('checking');
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [bootError, setBootError] = useState<{
+    title: string;
+    message: string;
+    hint?: string;
+  } | null>(null);
 
-  const showSetup = !setupDismissed;
+  const checkConnection = useCallback(async () => {
+    setDbStatus('checking');
+    setDbError(null);
+
+    const health = await activationApi.health();
+    if (!health.ok) {
+      setDbStatus('disconnected');
+      setDbError(health.error ?? 'MongoDB is not connected');
+      setLoaded(true);
+      return false;
+    }
+
+    setDbStatus(USE_API ? 'connected' : 'local');
+    return true;
+  }, []);
+
+  const refreshHospitals = useCallback(async () => {
+    const list = await activationApi.list();
+    setHospitals(list);
+    return list;
+  }, []);
+
+  const loadWorkspace = useCallback(async () => {
+    setBootError(null);
+    try {
+      const list = await refreshHospitals();
+      const current = list.find((h) => h.isCurrent);
+      if (current) {
+        setCurrentHospitalId(current._id);
+        const s = await activationApi.get(current._id);
+        setState(s);
+      } else {
+        setCurrentHospitalId(null);
+        setState(blankState());
+      }
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        clearSession();
+        setDbStatus(USE_API ? 'connected' : 'local');
+        setDbError(null);
+        setBootError(null);
+      } else if (err instanceof ApiError && err.status === 405) {
+        setDbStatus(USE_API ? 'connected' : 'local');
+        setBootError({
+          title: 'API server needs a restart',
+          message:
+            'The backend is running an old version that does not support listing hospitals.',
+          hint: 'Stop the old process and run npm run dev:api from the project root (or go run ./cmd/server in backend/). MongoDB is fine.',
+        });
+      } else if (err instanceof ApiError) {
+        setDbStatus(USE_API ? 'connected' : 'local');
+        setBootError({
+          title: 'Could not load data',
+          message: err.message,
+          hint: 'Check that the Go API is running on port 8080 and try again.',
+        });
+      } else {
+        setDbStatus('disconnected');
+        setDbError('Failed to load data from the API');
+      }
+    } finally {
+      setLoaded(true);
+    }
+  }, [clearSession, refreshHospitals]);
+
+  const bootstrap = useCallback(async () => {
+    if (!authReady) return;
+
+    setLoaded(false);
+    setBootError(null);
+    const healthOk = await checkConnection();
+    if (!healthOk) {
+      setLoaded(true);
+      return;
+    }
+
+    if (authRequired && !user) {
+      setDbStatus(USE_API ? 'connected' : 'local');
+      setDbError(null);
+      setLoaded(true);
+      return;
+    }
+
+    await loadWorkspace();
+  }, [authReady, authRequired, user, checkConnection, loadWorkspace]);
+
+  const retryConnection = useCallback(() => {
+    void bootstrap();
+  }, [bootstrap]);
 
   useEffect(() => {
-    activationApi.get().then((s) => {
-      setState(s);
-      setLoaded(true);
-    });
-  }, []);
-
-
-  const persist = useCallback((next: ActivationState) => {
-    setState(next);
-    void activationApi.save(next);
-  }, []);
+    void bootstrap();
+  }, [bootstrap]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     window.setTimeout(() => setToast(null), 2200);
   }, []);
+
+  const persist = useCallback(
+    (next: ActivationState) => {
+      setState(next);
+      if (!currentHospitalId) return;
+      void activationApi.save(next, currentHospitalId).then(() => {
+        void refreshHospitals();
+      }).catch((err) => {
+        if (isUnauthorized(err)) {
+          clearSession();
+          showToast('Session expired — please sign in again');
+          return;
+        }
+        setDbStatus('disconnected');
+        setDbError('Failed to save — MongoDB may be disconnected');
+        showToast('Save failed — check MongoDB connection');
+      });
+    },
+    [currentHospitalId, clearSession, showToast, refreshHospitals]
+  );
 
   const togglePhase = useCallback((id: number) => {
     setOpenPhases((prev) => {
@@ -248,13 +368,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [persist, showToast, state]
   );
 
+  const withHumblxPoc = useCallback(
+    (info: HospitalInfo): HospitalInfo => ({
+      ...info,
+      poc: humblxPocName(info.poc, user),
+    }),
+    [user]
+  );
+
   const saveInfo = useCallback(
     (info: HospitalInfo) => {
-      const next = { ...state, info };
+      const next = { ...state, info: withHumblxPoc(info) };
       persist(next);
       showToast('Details saved');
     },
-    [persist, showToast, state]
+    [persist, showToast, state, withHumblxPoc]
   );
 
   const addPoc = useCallback(
@@ -281,16 +409,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...state,
           nudgeLogs: [
             ...state.nudgeLogs,
-            { sender: currentSender, time: new Date().toISOString(), to: poc.name || 'Client PoC' },
+            { sender: senderName, time: new Date().toISOString(), to: poc.name || 'Client PoC' },
           ],
         },
-        `Nudge sent by ${currentSender} to ${poc.name || 'client'}`
+        `Nudge sent by ${senderName} to ${poc.name || 'client'}`
       );
       persist(next);
       window.open(`https://wa.me/${phone ? `91${phone}` : ''}?text=${encodeURIComponent(message)}`, '_blank');
       showToast(`Opening WhatsApp — ${poc.name || 'client'}`);
     },
-    [currentSender, nudgePoc, persist, showToast, state]
+    [senderName, nudgePoc, persist, showToast, state]
   );
 
   const copyNudge = useCallback(
@@ -307,62 +435,98 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (label) {
         const to = state.pocs[pickPocFor(state, id)]?.name?.split(' ')[0];
         setNudgeDraft(
-          `Hi${to ? ` ${to}` : ''},\n\nHope you're well! This is ${currentSender} from Humblx.\n\nQuick follow-up — we're waiting on:\n\n• ${label}\n\nPlease let us know once done or if you need any help.\n\nThank you!\n${currentSender}\nHumblx`
+          `Hi${to ? ` ${to}` : ''},\n\nHope you're well! This is ${senderName} from Humblx.\n\nQuick follow-up — we're waiting on:\n\n• ${label}\n\nPlease let us know once done or if you need any help.\n\nThank you!\n${senderName}\nHumblx`
         );
       }
     },
-    [currentSender, state]
+    [senderName, state]
   );
 
   const escalate = useCallback(
     (id: string, label: string) => {
-      setCurrentSender('Samir');
       setNudgePoc(pickPocFor(state, id));
       appNavigate(ROUTES.nudge);
       const to = state.pocs[pickPocFor(state, id)]?.name?.split(' ')[0];
       setNudgeDraft(
-        `Hi${to ? ` ${to}` : ''},\n\nThis is Samir from Humblx. Following up on an item that's now past our agreed turnaround for the ${state.info.name} onboarding:\n\n• ${label}\n\nThis is currently holding up the next phase. Could you prioritise it today, or point me to who can? Happy to hop on a quick call if that's easier.\n\nThank you,\nSamir\nHumblx`
+        `Hi${to ? ` ${to}` : ''},\n\nThis is ${senderName} from Humblx. Following up on an item that's now past our agreed turnaround for the ${state.info.name} onboarding:\n\n• ${label}\n\nThis is currently holding up the next phase. Could you prioritise it today, or point me to who can? Happy to hop on a quick call if that's easier.\n\nThank you,\n${senderName}\nHumblx`
       );
-      showToast('Escalation drafted — from Samir');
+      showToast(`Escalation drafted — from ${senderName}`);
     },
-    [showToast, state]
+    [senderName, showToast, state]
   );
 
-  const startSetup = useCallback(
-    (info: HospitalInfo, pocs: Poc[]): string | null => {
+  const selectHospital = useCallback(
+    async (id: string) => {
+      const doc = await activationApi.select(id);
+      setCurrentHospitalId(id);
+      setState(stateFromDoc(doc));
+      await refreshHospitals();
+      showToast(`Switched to ${doc.info.name || 'hospital'}`);
+    },
+    [refreshHospitals, showToast]
+  );
+
+  const createHospital = useCallback(
+    async (info: HospitalInfo, pocs: Poc[]): Promise<string | null> => {
       if (!info.name.trim()) return 'Hospital name is required';
       if (!pocs.length || !pocs[0].name?.trim()) return 'At least one contact name is required';
       if (!pocs[0].phone?.trim()) return 'Primary contact phone is required';
-      const next = { ...state, setupDone: true, info, pocs };
-      persist(next);
-      setSetupDismissed(true);
-      showToast('Setup complete — tracking started');
+      const next = { ...blankState(), setupDone: true, info: withHumblxPoc(info), pocs };
+      const doc = await activationApi.create(next);
+      const id = doc._id!;
+      setCurrentHospitalId(id);
+      setState(stateFromDoc(doc));
+      await refreshHospitals();
+      showToast(`${info.name} added — tracking started`);
       return null;
     },
-    [persist, showToast, state]
+    [refreshHospitals, showToast, withHumblxPoc]
   );
 
-  const loadDemo = useCallback(() => {
-    const next = demoState();
-    persist(next);
-    setSetupDismissed(true);
-    showToast('Demo data loaded');
-  }, [persist, showToast]);
+  const updateHospital = useCallback(
+    async (id: string, info: HospitalInfo, pocs: Poc[]): Promise<string | null> => {
+      if (!info.name.trim()) return 'Hospital name is required';
+      if (!pocs.length || !pocs[0].name?.trim()) return 'At least one contact name is required';
+      if (!pocs[0].phone?.trim()) return 'Primary contact phone is required';
+      const next = { ...state, setupDone: true, info: withHumblxPoc(info), pocs };
+      await activationApi.save(next, id);
+      if (id === currentHospitalId) setState(next);
+      await refreshHospitals();
+      showToast('Hospital details saved');
+      return null;
+    },
+    [currentHospitalId, refreshHospitals, showToast, state, withHumblxPoc]
+  );
 
-  const resetApp = useCallback(() => {
-    void activationApi.reset().then((s) => {
-      setState(s);
-      setSetupPocs([{}]);
-      setSetupDismissed(false);
-      appNavigate(ROUTES.setup);
-      showToast('Ready for a new hospital');
-    });
-  }, [showToast]);
+  const deleteHospital = useCallback(
+    async (id: string) => {
+      await activationApi.delete(id);
+      const list = await refreshHospitals();
+      if (id === currentHospitalId) {
+        const next = list.find((h) => h.isCurrent) ?? list[0];
+        if (next) {
+          await selectHospital(next._id);
+        } else {
+          setCurrentHospitalId(null);
+          setState(blankState());
+          appNavigate(ROUTES.hospitals);
+        }
+      }
+      showToast('Hospital removed');
+    },
+    [currentHospitalId, refreshHospitals, selectHospital, showToast]
+  );
 
-  const continueTracking = useCallback(() => {
-    setSetupDismissed(true);
-    showToast('Continuing with saved data');
-  }, [showToast]);
+  const loadDemo = useCallback(async () => {
+    const next = demoState(senderName);
+    const doc = await activationApi.create(next);
+    setCurrentHospitalId(doc._id!);
+    setState(stateFromDoc(doc));
+    await refreshHospitals();
+    showToast('Demo hospital created');
+  }, [refreshHospitals, showToast, senderName]);
+
+  const resetSetupForm = useCallback(() => setSetupPocs([{}]), []);
 
   const addSetupPoc = useCallback(() => setSetupPocs((p) => [...p, {}]), []);
   const removeSetupPoc = useCallback(
@@ -376,21 +540,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const clientDone = useCallback(
     (label: string) => {
+      const lead = state.info.poc.trim() || 'Humblx team';
       const msg = encodeURIComponent(
-        `Hi Humblx team,\n\nWe've completed: ${label}\n\nPlease proceed with the next step.\n\nThanks!`
+        `Hi ${lead},\n\nWe've completed: ${label}\n\nPlease proceed with the next step.\n\nThanks!`
       );
       window.open(`https://wa.me/?text=${msg}`, '_blank');
       showToast('Opening WhatsApp…');
     },
-    [showToast]
+    [showToast, state.info.poc]
   );
 
   const value = useMemo<AppContextValue>(
     () => ({
       state,
       loaded,
+      dbStatus,
+      dbError,
+      bootError,
+      retryConnection,
       msFilter,
-      currentSender,
+      senderName,
       nudgePoc,
       toast,
       statusModal,
@@ -398,9 +567,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       pocModalOpen,
       openPhases,
       setupPocs,
-      showSetup,
+      hospitals,
+      currentHospitalId,
       setMsFilter,
-      setCurrentSender,
       setNudgePoc,
       showToast,
       togglePhase,
@@ -421,11 +590,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       copyNudge,
       quickNudge,
       escalate,
-      startSetup,
+      selectHospital,
+      createHospital,
+      updateHospital,
+      deleteHospital,
+      refreshHospitals,
       loadDemo,
-      resetApp,
-      continueTracking,
       setSetupPocs,
+      resetSetupForm,
       addSetupPoc,
       removeSetupPoc,
       clientDone,
@@ -435,8 +607,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [
       state,
       loaded,
+      dbStatus,
+      dbError,
+      bootError,
+      retryConnection,
       msFilter,
-      currentSender,
+      senderName,
       nudgePoc,
       toast,
       statusModal,
@@ -444,7 +620,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       pocModalOpen,
       openPhases,
       setupPocs,
-      showSetup,
+      hospitals,
+      currentHospitalId,
       showToast,
       togglePhase,
       openPhaseForMilestone,
@@ -462,10 +639,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       copyNudge,
       quickNudge,
       escalate,
-      startSetup,
+      selectHospital,
+      createHospital,
+      updateHospital,
+      deleteHospital,
+      refreshHospitals,
       loadDemo,
-      resetApp,
-      continueTracking,
+      resetSetupForm,
       addSetupPoc,
       removeSetupPoc,
       clientDone,

@@ -4,7 +4,9 @@ import { fmtDate } from '../lib/utils';
 import { downloadTemplate } from '../lib/templates';
 import type { DocState, DocStatus } from '../types';
 import { IconCheck, IconExt } from '../components/icons';
+import { PageHeader } from '../components/layout/PageHeader';
 import { TemplateButton } from '../components/ui/TemplateButton';
+import { ROUTES } from '../routes/paths';
 
 const STEPS: { key: DocStatus; label: string; dk?: keyof DocState }[] = [
   { key: 'not-sent', label: 'Not Sent' },
@@ -17,17 +19,16 @@ export function DocsPage() {
   const { state, advanceDoc, saveDocLink, showToast } = useApp();
 
   return (
-    <div className="pb-24">
-      <div className="mx-4 mt-4 mb-3 font-mono text-[10px] uppercase tracking-widest text-ink3">
-        Document Approval · 8 Items
-      </div>
+    <div>
+      <PageHeader title="Documents" subtitle="Document approval · 8 items" backTo={ROUTES.home} />
+      <div className="page-grid-2">
       {DOCS.map((d) => {
         const doc = state.docs[d.id];
         const ci = STEPS.findIndex((s) => s.key === doc.status);
         const tpls = DOC_TEMPLATES[d.id] || [];
 
         return (
-          <div key={d.id} className="mx-4 mb-2.5 rounded-app border border-line bg-surface p-3.5 shadow-app">
+          <div key={d.id} className="rounded-app border border-line bg-surface p-3.5 shadow-app sm:p-4">
             <div className="mb-2.5 text-[13px] font-semibold text-ink">{d.name}</div>
             <div className="mb-2.5 flex flex-wrap items-center gap-1">
               {STEPS.map((s, i) => (
@@ -72,6 +73,7 @@ export function DocsPage() {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

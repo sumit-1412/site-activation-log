@@ -1,40 +1,74 @@
-# Go + MongoDB Backend (planned)
+# Humblx Site Activation Log — Go API
 
-This folder is reserved for your Go API. The React frontend is already wired to call these endpoints when `VITE_API_URL` is set.
+REST API backed by MongoDB. Matches `frontend/src/api/client.ts`.
 
-## Suggested stack
+## Stack
 
-- **Go** — `chi` or `gin` router
-- **MongoDB** — `activations` collection
-- **Document shape** — matches `ActivationDocument` in `frontend/src/types/index.ts`
+- **Go 1.22** + [chi](https://github.com/go-chi/chi)
+- **MongoDB** — `humblx_activation.activations` collection
 
-## Planned REST API
+## Environment (`backend/.env`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8080` | HTTP port |
+| `MONGODB_URI` | `mongodb://localhost:27017` | Your MongoDB connection string |
+| `MONGODB_DB` | `humblx_activation` | Database name |
+| `CORS_ORIGINS` | `http://localhost:5173,...` | Comma-separated allowed origins |
+
+Copy `backend/.env.example` → `backend/.env` and paste your Atlas (or other) URI.
+
+## Run locally (no Docker)
+
+```bash
+cd backend
+go run ./cmd/server
+```
+
+- Health: http://localhost:8080/api/health
+- Frontend: set `VITE_USE_API=true` in `frontend/.env`, then `npm run dev`
+
+## Run with Docker
+
+**Your MongoDB URI (Atlas)** — from project root:
+
+```bash
+docker compose up api --build
+```
+
+**Local MongoDB in Docker**:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+```
+
+## API
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/activations/current` | Load active onboarding session |
-| PUT | `/api/activations/current` | Save full state |
-| POST | `/api/activations` | Create new activation |
-| DELETE | `/api/activations/current` | Reset / clear |
+| GET | `/api/health` | Health check |
+| GET | `/api/activations/current` | Load current activation (404 if none) |
+| PUT | `/api/activations/current` | Create or update current activation |
+| DELETE | `/api/activations/current` | Delete current activation |
+| POST | `/api/activations` | Create new activation (becomes current) |
+| GET | `/api/activations/{id}` | Load by MongoDB ObjectId |
 
-## MongoDB document example
+## AWS deployment notes
 
-```json
-{
-  "_id": "ObjectId",
-  "setupDone": true,
-  "info": { "name": "XYZ Hospital", "city": "Gurugram", ... },
-  "milestones": { "m1": { "status": "done", ... } },
-  "docs": { "d1": { "status": "not-sent", ... } },
-  "visits": [],
-  "pocs": [],
-  "nudgeLogs": [],
-  "activity": [],
-  "createdAt": "ISO8601",
-  "updatedAt": "ISO8601"
-}
+- Build: `docker build -t site-activation-api ./backend`
+- Inject `MONGODB_URI`, `MONGODB_DB`, `CORS_ORIGINS` at runtime (Secrets Manager / task env)
+- Point `CORS_ORIGINS` at your production frontend URL
+- Atlas IP allowlist: add your ECS/NAT egress IP or use `0.0.0.0/0` for dev only
+
+## Project layout
+
 ```
-
-## CORS
-
-Allow `http://localhost:5173` during development.
+backend/
+├── cmd/server/main.go
+├── internal/config/
+├── internal/handlers/
+├── internal/models/
+├── internal/store/
+├── Dockerfile
+└── go.mod
+```

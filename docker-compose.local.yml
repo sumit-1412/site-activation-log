@@ -1,0 +1,31 @@
+# Optional local MongoDB — merge with base compose:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+#
+# Overrides MONGODB_URI so the API talks to the mongodb service on the Docker network.
+
+services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  api:
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017
+      MONGODB_DB: ${MONGODB_DB:-humblx_activation}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+volumes:
+  mongodb_data:

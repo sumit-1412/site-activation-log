@@ -104,3 +104,13 @@ export interface ActivationDocument extends ActivationState {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface HospitalSummary {
+  _id: string;
+  name: string;
+  city: string;
+  setupDone: boolean;
+  isCurrent: boolean;
+  progress: number;
+  updatedAt: string;
+}

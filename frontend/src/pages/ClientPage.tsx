@@ -27,8 +27,8 @@ export function ClientPage() {
   const labels = { done: 'Complete', progress: 'In Progress', waiting: 'Waiting on You', idle: 'Not Started' };
 
   return (
-    <div className="pb-10 pt-[calc(54px+env(safe-area-inset-top))]">
-      <div className="mx-4 mt-4 text-center">
+    <div>
+      <div className="mt-2 text-center sm:mt-4">
         <div className="font-display text-[21px] font-bold tracking-tight">{state.info.name}</div>
         <div className="mt-1 text-xs text-ink2">Onboarding with Humblx</div>
       </div>
@@ -44,17 +44,22 @@ export function ClientPage() {
         </div>
       </div>
 
-      <div className="mb-2 text-center text-[13px] text-ink2">
-        {state.info.goliveDate ? <>Target go-live: <b className="font-semibold text-ink">{fmtDate(state.info.goliveDate)}</b></> : null}
+      <div className="mb-2 space-y-1 text-center text-[13px] text-ink2">
+        {state.info.goliveDate ? (
+          <div>Target go-live: <b className="font-semibold text-ink">{fmtDate(state.info.goliveDate)}</b></div>
+        ) : null}
+        {state.info.poc ? (
+          <div>Your Humblx contact: <b className="font-semibold text-ink">{state.info.poc}</b></div>
+        ) : null}
       </div>
 
-      <div className="mx-4 mb-1.5 font-mono text-[10px] uppercase tracking-widest text-ink3">Pending From You</div>
+      <div className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-ink3">Pending From You</div>
       {todos.length ? (
         todos.map((t) => {
           const days = t.sentAt ? Math.floor((Date.now() - new Date(t.sentAt).getTime()) / 86400000) : null;
           const tpls = (MS_TEMPLATES[t.id] || []).filter((k) => TEMPLATES[k]?.kind === 'client');
           return (
-            <div key={t.id} className="mx-4 mb-2.5 rounded-app border border-line bg-surface px-3.5 py-3 shadow-app">
+            <div key={t.id} className="mb-2.5 w-full rounded-app border border-line bg-surface px-3.5 py-3 shadow-app sm:mb-3">
               <div className="mb-2 text-[13px] leading-snug text-ink">{t.label}</div>
               {days !== null && days > 0 && <div className="mb-2 text-[11px] font-medium text-amber">Waiting on you for {days} day{days > 1 ? 's' : ''}</div>}
               {tpls.length > 0 && (
@@ -74,19 +79,19 @@ export function ClientPage() {
           );
         })
       ) : (
-        <div className="mx-4 mb-2.5 rounded-app border border-line bg-surface px-3.5 py-3 shadow-app">
+        <div className="mb-2.5 w-full rounded-app border border-line bg-surface px-3.5 py-3 shadow-app">
           <div className="flex items-center gap-2 text-accent"><IconCheckOk className="h-4 w-4" /> Nothing pending from your side right now.</div>
         </div>
       )}
 
       {todos.length > 0 && (
-        <p className="mx-4 mb-3.5 text-center text-[11.5px] leading-snug text-ink3">
+        <p className="mb-3.5 text-center text-[11.5px] leading-snug text-ink3">
           Each pending item above can push your go-live date. Clearing them keeps you on track.
         </p>
       )}
 
-      <div className="mx-4 mb-1.5 font-mono text-[10px] uppercase tracking-widest text-ink3">Where We Are</div>
-      <div className="mx-4 rounded-app border border-line bg-surface p-4 shadow-app">
+      <div className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-ink3">Where We Are</div>
+      <div className="rounded-app border border-line bg-surface p-4 shadow-app sm:p-5">
         {PHASES.map((p, i) => {
           const s = statuses[i];
           const Icon = s === 'done' ? IconCheck : s === 'progress' ? IconSpinner : s === 'waiting' ? IconClock : IconDash;

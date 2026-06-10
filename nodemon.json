@@ -1,0 +1,8 @@
+{
+  "watch": ["backend"],
+  "ext": "go,env",
+  "ignore": ["backend/bin/**", "**/*_test.go"],
+  "cwd": "backend",
+  "exec": "go run ./cmd/server",
+  "delay": "500"
+}

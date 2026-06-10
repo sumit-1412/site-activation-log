@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { PageHeader } from '../components/layout/PageHeader';
 import { useApp } from '../context/AppContext';
 import { ROUTES } from '../routes/paths';
 import {
@@ -26,15 +27,21 @@ export function HomePage() {
   const next = getNextActions(state, 3);
 
   return (
-    <div className="pb-24">
-      <div className="mx-4 mt-4">
+    <div>
+      <PageHeader
+        title="Dashboard"
+        subtitle="Active hospital overview"
+        backTo={ROUTES.hospitals}
+      />
+      <div className="mt-2 sm:mt-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="font-display text-[23px] font-bold leading-tight tracking-tight">{state.info.name}</div>
+            <div className="font-display text-[23px] font-bold leading-tight tracking-tight">{state.info.name || 'Unnamed hospital'}</div>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {state.info.city && <Chip>{state.info.city}</Chip>}
               {state.info.beds ? <Chip>{state.info.beds} beds</Chip> : null}
               <Chip>{state.info.modules?.join(' · ') || 'No modules'}</Chip>
+              {state.info.poc && <Chip>Lead: {state.info.poc}</Chip>}
             </div>
           </div>
           <div className="font-display text-[34px] font-bold leading-none tracking-tighter text-accent">
@@ -54,7 +61,7 @@ export function HomePage() {
         </div>
       </div>
 
-      <div className="mx-4 mt-4 grid grid-cols-3 rounded-app border border-line bg-surface shadow-app">
+      <div className="mt-4 grid grid-cols-3 rounded-app border border-line bg-surface shadow-app sm:mt-6">
         <Stat n={done} label="Done" color="text-accent" />
         <Stat n={waiting} label="Waiting" color="text-amber" />
         <Stat n={overdue.length} label="Overdue" color="text-red" last />
@@ -128,7 +135,7 @@ export function HomePage() {
         )}
       </Block>
 
-      <div className="mx-4 grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
         <Link to={ROUTES.nudge} className="flex items-center justify-center gap-2 rounded-app-sm border border-accent bg-accent py-3 text-[13px] font-semibold text-white no-underline">
           <IconSend className="h-4 w-4" /> Send Nudge
         </Link>
@@ -153,7 +160,7 @@ function Stat({ n, label, color, last }: { n: number; label: string; color: stri
 }
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mx-4 mb-[18px]">
+    <div className="mb-[18px] w-full">
       <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-ink3">{title}</div>
       <div className="overflow-hidden rounded-app border border-line bg-surface shadow-app">{children}</div>
     </div>

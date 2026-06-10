@@ -38,7 +38,13 @@ export function IconExt(props: IconProps) {
   return <svg {...base} strokeWidth={2} {...props}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><path d="M15 3h6v6M10 14 21 3" /></svg>;
 }
 export function IconChev(props: IconProps) {
-  return <svg {...base} strokeWidth={2} className="w-[15px] h-[15px] text-ink3 transition-transform duration-200" {...props}><polyline points="6 9 12 15 18 9" /></svg>;
+  return <svg {...base} strokeWidth={2} className="h-[15px] w-[15px] text-ink3 transition-transform duration-200" {...props}><polyline points="6 9 12 15 18 9" /></svg>;
+}
+export function IconBack(props: IconProps) {
+  return <svg {...base} strokeWidth={2} {...props}><polyline points="15 18 9 12 15 6" /></svg>;
+}
+export function IconLogOut(props: IconProps) {
+  return <svg {...base} strokeWidth={2} {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>;
 }
 export function IconInbox(props: IconProps) {
   return <svg {...base} {...props}><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></svg>;

@@ -28,7 +28,7 @@ export function blankState(): ActivationState {
   return {
     setupDone: false,
     info: {
-      name: 'XYZ Hospital',
+      name: '',
       city: '',
       beds: '',
       modules: [],
@@ -47,10 +47,11 @@ export function blankState(): ActivationState {
   };
 }
 
-export function demoState(): ActivationState {
+export function demoState(humblxLead: string): ActivationState {
   const s = blankState();
   s.setupDone = true;
   const ago = daysAgoISO;
+  const lead = humblxLead.trim() || 'Humblx Team';
 
   ['m1', 'm2', 'm3', 'm5', 'm6', 'm7'].forEach((id, i) => {
     s.milestones[id].status = 'done';
@@ -68,12 +69,12 @@ export function demoState(): ActivationState {
   s.docs.d8.receivedDate = ago(19);
   s.docs.d8.approvedDate = ago(18);
   s.info = {
-    name: 'XYZ Hospital',
+    name: 'Demo Hospital',
     city: 'Gurugram',
     beds: 312,
     modules: ['HK', 'FM', 'Feedback'],
     type: 'Full Onboarding',
-    poc: 'Puranjane Singh',
+    poc: lead,
     startDate: ago(24),
     goliveDate: ago(-18),
   };
@@ -82,7 +83,7 @@ export function demoState(): ActivationState {
       name: 'Dr. Meenakshi Iyer',
       role: 'GM Operations',
       phone: '9818074421',
-      email: 'meenakshi.iyer@xyzhospital.in',
+      email: 'meenakshi.iyer@demohospital.in',
     },
     { name: 'Harpreet Bedi', role: 'Facility Head', phone: '9871230558', email: '' },
   ];
@@ -91,12 +92,19 @@ export function demoState(): ActivationState {
       id: 'v1',
       date: ago(20),
       type: 'Site Survey',
-      team: ['Puranjane', 'Ujjwal'],
+      team: [lead],
       clientMet: 'Dr. Meenakshi Iyer (GM Operations)',
       outcome: 'productive',
       nextAction: 'Send facility list template',
       nextOwner: 'Humblx',
       nextDate: ago(18),
+    },
+  ];
+  s.nudgeLogs = [
+    {
+      sender: lead,
+      time: new Date(Date.now() - 3 * 24 * 3600000).toISOString(),
+      to: 'Dr. Meenakshi Iyer',
     },
   ];
   s.activity = [
