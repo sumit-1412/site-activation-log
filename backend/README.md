@@ -14,7 +14,7 @@ REST API backed by MongoDB. Matches `frontend/src/api/client.ts`.
 | `PORT` | `8080` | HTTP port |
 | `MONGODB_URI` | `mongodb://localhost:27017` | Your MongoDB connection string |
 | `MONGODB_DB` | `humblx_activation` | Database name |
-| `CORS_ORIGINS` | `http://localhost:5173,...` | Comma-separated allowed origins |
+| `CORS_ORIGINS` | `https://site-activation-log.vercel.app,http://localhost:5173,...` | Comma-separated allowed origins |
 
 Copy `backend/.env.example` → `backend/.env` and paste your Atlas (or other) URI.
 

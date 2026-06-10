@@ -1,4 +1,6 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+import { apiBase } from '../config/urls';
+
+const API_BASE = apiBase;
 const TOKEN_KEY = 'hx_auth_token';
 
 export interface AuthUser {

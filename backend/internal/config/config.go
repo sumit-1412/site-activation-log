@@ -19,7 +19,7 @@ type Config struct {
 func Load() Config {
 	origins := os.Getenv("CORS_ORIGINS")
 	if origins == "" {
-		origins = "http://localhost:5173,http://127.0.0.1:5173"
+		origins = "https://site-activation-log.vercel.app,http://localhost:5173,http://127.0.0.1:5173"
 	}
 
 	port := os.Getenv("PORT")

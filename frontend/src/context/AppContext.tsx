@@ -177,7 +177,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setBootError({
           title: 'Could not load data',
           message: err.message,
-          hint: 'Check that the Go API is running on port 8080 and try again.',
+          hint: 'Check that the Go API is running and VITE_API_URL points to it (production) or use npm run dev:api locally.',
         });
       } else {
         setDbStatus('disconnected');

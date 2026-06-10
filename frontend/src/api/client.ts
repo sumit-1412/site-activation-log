@@ -1,8 +1,9 @@
 import type { ActivationDocument, ActivationState, HospitalSummary } from '../types';
+import { apiBase } from '../config/urls';
 import { authHeaders } from './auth';
 import { blankState, loadLocalState, normalizeState, saveLocalState } from '../lib/state';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const API_BASE = apiBase;
 export const USE_API =
   import.meta.env.VITE_USE_API === 'true' || Boolean(import.meta.env.VITE_API_URL);
 
@@ -83,7 +84,7 @@ export const activationApi = {
       return {
         ok: false,
         mongodb: 'disconnected',
-        error: 'Cannot reach API server — is the backend running on port 8080?',
+        error: 'Cannot reach API server — check VITE_API_URL (production) or run the Go API locally.',
       };
     }
   },

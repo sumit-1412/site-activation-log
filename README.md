@@ -47,6 +47,21 @@ npm run dev
 
 Open http://localhost:5173 — check the browser console for `[activation] API mode → /api`.
 
+## Production frontend (Vercel)
+
+**Live app:** https://site-activation-log.vercel.app/
+
+1. Deploy the Go API somewhere public (Railway, Render, ECS, etc.).
+2. Set **Vercel → Environment Variables** (then redeploy):
+   - `VITE_USE_API=true`
+   - `VITE_API_URL=https://YOUR-API-HOST/api`
+   - `VITE_APP_URL=https://site-activation-log.vercel.app`
+   - `VITE_GOOGLE_CLIENT_ID` (same as backend)
+3. Set **backend** `CORS_ORIGINS` to include `https://site-activation-log.vercel.app` (already in `.env.example`).
+4. In **Google Cloud Console**, add `https://site-activation-log.vercel.app` as an authorized JavaScript origin.
+
+`frontend/vercel.json` enables client-side routing (refresh on `/home`, etc.).
+
 ## Docker
 
 Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
@@ -82,10 +97,14 @@ The same `backend` Docker image can deploy to ECS, App Runner, or EC2. Typical s
 Build the frontend with your production API URL:
 
 ```bash
-VITE_USE_API=true VITE_API_URL=https://api.yourdomain.com/api npm run build
+cd frontend
+VITE_USE_API=true \
+VITE_API_URL=https://api.yourdomain.com/api \
+VITE_APP_URL=https://site-activation-log.vercel.app \
+npm run build
 ```
 
-Set `MONGODB_URI`, `MONGODB_DB`, and `CORS_ORIGINS` as environment variables on the API service (never commit secrets).
+Set `MONGODB_URI`, `MONGODB_DB`, and `CORS_ORIGINS` (include `https://site-activation-log.vercel.app`) on the API service (never commit secrets).
 
 ## Routes
 
