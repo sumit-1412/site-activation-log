@@ -1,22 +1,18 @@
-# Render Blueprint — https://render.com/docs/blueprint-spec
-# Dashboard: connect repo and use Root Directory = backend if not using Blueprint.
+# Render Blueprint — Docker avoids native Go "./app: Permission denied" issues.
 
 services:
   - type: web
     name: site-activation-log-api
-    runtime: go
-    rootDir: backend
-    buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: ./app
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     healthCheckPath: /api/health
     envVars:
       - key: PORT
         value: "8080"
-      - key: GO_VERSION
-        value: "1.22.12"
       - key: MONGODB_DB
         value: humblx_activation
       - key: CORS_ORIGINS
         value: https://site-activation-log.vercel.app,http://localhost:5173
-      # Set these in Render dashboard (secrets):
+      # Set in Render dashboard (secrets):
       # MONGODB_URI, GOOGLE_CLIENT_ID, ADMIN_EMAIL, ADMIN_PASSWORD

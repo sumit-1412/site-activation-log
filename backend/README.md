@@ -55,17 +55,29 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 
 ## Deploy on Render
 
-**Error `./app: No such file or directory`** means the start command ran but the build did not produce `app` (wrong root dir or failed build).
+### Recommended: Docker (avoids `./app` permission errors)
 
-In Render → your Web Service → **Settings**:
+Render → **New Web Service** → **Language: Docker**
+
+| Field | Value |
+|-------|--------|
+| **Root Directory** | *(leave empty — repo root)* |
+| **Dockerfile Path** | `backend/Dockerfile` |
+| **Docker Context** | `backend` |
+
+Start command comes from the Dockerfile (`./server`). No `./app` step.
+
+Or use the repo `render.yaml` Blueprint.
+
+### Alternative: Native Go
 
 | Field | Value |
 |-------|--------|
 | **Root Directory** | `backend` |
-| **Build Command** | `chmod +x build.sh && ./build.sh` (or `go build -o app ./cmd/server && chmod +x app`) |
-| **Start Command** | `./app` |
+| **Build Command** | `go build -o app ./cmd/server && chmod +x app` |
+| **Start Command** | `sh -c 'chmod +x ./app && exec ./app'` |
 
-**Permission denied on `./app`?** The binary exists but is not executable — add `chmod +x app` to the build command.
+If `./app: Permission denied` persists on native Go, switch to **Docker** above.
 
 **Environment variables** (Render → Environment):
 
