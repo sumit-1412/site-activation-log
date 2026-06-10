@@ -53,6 +53,35 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 | POST | `/api/activations` | Create new activation (becomes current) |
 | GET | `/api/activations/{id}` | Load by MongoDB ObjectId |
 
+## Deploy on Render
+
+**Error `./app: No such file or directory`** means the start command ran but the build did not produce `app` (wrong root dir or failed build).
+
+In Render → your Web Service → **Settings**:
+
+| Field | Value |
+|-------|--------|
+| **Root Directory** | `backend` |
+| **Build Command** | `go build -o app ./cmd/server` |
+| **Start Command** | `./app` |
+
+**Environment variables** (Render → Environment):
+
+```
+PORT=8080
+GO_VERSION=1.22.12
+MONGODB_URI=your-atlas-uri
+MONGODB_DB=humblx_activation
+CORS_ORIGINS=https://site-activation-log.vercel.app,http://localhost:5173
+GOOGLE_CLIENT_ID=...
+ADMIN_EMAIL=...
+ADMIN_PASSWORD=...
+```
+
+Or use the repo’s `render.yaml` Blueprint from the project root.
+
+After deploy, test `https://YOUR-SERVICE.onrender.com/api/health`, then set Vercel `VITE_API_URL=https://YOUR-SERVICE.onrender.com/api`.
+
 ## AWS deployment notes
 
 - Build: `docker build -t site-activation-api ./backend`
