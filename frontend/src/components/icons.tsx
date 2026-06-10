@@ -37,8 +37,17 @@ export function IconMail(props: IconProps) {
 export function IconExt(props: IconProps) {
   return <svg {...base} strokeWidth={2} {...props}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><path d="M15 3h6v6M10 14 21 3" /></svg>;
 }
-export function IconChev(props: IconProps) {
-  return <svg {...base} strokeWidth={2} className="h-[15px] w-[15px] text-ink3 transition-transform duration-200" {...props}><polyline points="6 9 12 15 18 9" /></svg>;
+export function IconChev({ className, ...props }: IconProps) {
+  return (
+    <svg
+      {...base}
+      strokeWidth={2}
+      className={`h-3.5 w-3.5 shrink-0 stroke-ink3 transition-transform duration-200 ${className ?? ''}`.trim()}
+      {...props}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
 }
 export function IconBack(props: IconProps) {
   return <svg {...base} strokeWidth={2} {...props}><polyline points="15 18 9 12 15 6" /></svg>;

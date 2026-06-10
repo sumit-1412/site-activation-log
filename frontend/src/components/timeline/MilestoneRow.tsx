@@ -53,13 +53,13 @@ export function MilestoneRow({ milestoneId, children }: { milestoneId: string; c
 
   return (
     <div className="relative overflow-hidden border-b border-line2 touch-pan-y last:border-b-0">
-      <div className={`absolute inset-y-0 left-0 z-[1] flex items-center gap-1.5 bg-accent-soft px-[18px] text-xs font-semibold text-accent transition-opacity ${revealDone ? 'opacity-100' : 'opacity-0'}`}>
-        <IconCheck className="h-3.5 w-3.5 stroke-accent" />
+      <div className={`absolute inset-y-0 left-0 z-[1] flex w-[88px] items-center gap-1 bg-accent-soft pl-3 text-[11px] font-semibold text-accent transition-opacity ${revealDone ? 'opacity-100' : 'opacity-0'}`}>
+        <IconCheck className="h-3 w-3 shrink-0 stroke-accent" />
         <span>Done</span>
       </div>
-      <div className={`absolute inset-y-0 right-0 z-[1] flex items-center justify-end gap-1.5 bg-amber-soft px-[18px] text-xs font-semibold text-amber transition-opacity ${revealWait ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`absolute inset-y-0 right-0 z-[1] flex w-[88px] items-center justify-end gap-1 bg-amber-soft pr-3 text-[11px] font-semibold text-amber transition-opacity ${revealWait ? 'opacity-100' : 'opacity-0'}`}>
         <span>Waiting</span>
-        <IconClock className="h-3.5 w-3.5 stroke-amber" />
+        <IconClock className="h-3 w-3 shrink-0 stroke-amber" />
       </div>
       <div
         ref={slideRef}

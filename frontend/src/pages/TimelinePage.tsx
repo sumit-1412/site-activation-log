@@ -125,7 +125,7 @@ export function TimelinePage() {
                 <span className="shrink-0 rounded-md border border-line bg-surface2 px-1.5 py-0.5 font-mono text-[10px] text-ink2">P{p.id}</span>
                 <span className="flex-1 font-display text-sm font-semibold tracking-tight">{p.name}</span>
                 <span className="font-mono text-[11px] text-ink3">{done}/{p.milestones.length}</span>
-                <IconChev className={isOpen ? 'rotate-180' : ''} />
+                <IconChev className={isOpen ? 'rotate-180' : undefined} />
               </button>
               {isOpen && (
                 <div className="border-t border-line2">
