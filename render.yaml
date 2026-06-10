@@ -7,9 +7,8 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     healthCheckPath: /api/health
+    # Do NOT set PORT — Render injects it automatically (e.g. 10000).
     envVars:
-      - key: PORT
-        value: "8080"
       - key: MONGODB_DB
         value: humblx_activation
       - key: CORS_ORIGINS

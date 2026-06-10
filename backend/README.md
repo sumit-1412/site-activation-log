@@ -82,7 +82,7 @@ If `./app: Permission denied` persists on native Go, switch to **Docker** above.
 **Environment variables** (Render → Environment):
 
 ```
-PORT=8080
+# Do NOT set PORT — Render sets it for you; the app reads os.Getenv("PORT")
 GO_VERSION=1.22.12
 MONGODB_URI=your-atlas-uri
 MONGODB_DB=humblx_activation
