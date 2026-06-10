@@ -62,8 +62,10 @@ In Render → your Web Service → **Settings**:
 | Field | Value |
 |-------|--------|
 | **Root Directory** | `backend` |
-| **Build Command** | `go build -o app ./cmd/server` |
+| **Build Command** | `chmod +x build.sh && ./build.sh` (or `go build -o app ./cmd/server && chmod +x app`) |
 | **Start Command** | `./app` |
+
+**Permission denied on `./app`?** The binary exists but is not executable — add `chmod +x app` to the build command.
 
 **Environment variables** (Render → Environment):
 

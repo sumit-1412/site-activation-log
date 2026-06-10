@@ -6,7 +6,7 @@ services:
     name: site-activation-log-api
     runtime: go
     rootDir: backend
-    buildCommand: go build -o app ./cmd/server
+    buildCommand: chmod +x build.sh && ./build.sh
     startCommand: ./app
     healthCheckPath: /api/health
     envVars:
